@@ -1,13 +1,21 @@
 package rs.ac.bg.etf.cuckoo;
 
+import java.util.Random;
+import org.apache.commons.codec.digest.MurmurHash3;
+
 public class CuckooHashing<T> {
 
     int size;
     int capacity;
     int threshold;
-    float loadFactor;
+    double loadFactor;
     Entry<T>[] firstTable;
     Entry<T>[] secondTable;
+
+    static final int MAXIMUM_CAPACITY = 1073741824;
+    Random random;
+    int seed1;
+    int seed2;
 
     class Entry<E> {
         E key;
@@ -18,24 +26,27 @@ public class CuckooHashing<T> {
     }
 
     public CuckooHashing() {
-        this(1024, 1/3);
+        this(1024, (double) 1 / 3);
     }
 
-    public CuckooHashing(int capacity, float loadFactor) {
+    public CuckooHashing(int capacity, double loadFactor) {
         this.size = 0;
         this.capacity = capacity;
-        this.threshold = (int) Math.log(capacity);
+        this.threshold = (int) Math.ceil(3 * Math.log(capacity) / Math.log(2));
         this.loadFactor = loadFactor;
         this.firstTable = new Entry[capacity / 2];
         this.secondTable = new Entry[capacity / 2];
+        this.random = new Random();
+        this.seed1 = random.nextInt();
+        this.seed2 = random.nextInt();
     }
 
-    private int hashFunction1(T key) {
-        return key.hashCode() % firstTable.length;
+    protected int hashFunction1(T key) {
+        return MurmurHash3.hash32(key.hashCode(), seed1) & (firstTable.length - 1);
     }
 
-    private int hashFunction2(T key) {
-        return (key.hashCode() / secondTable.length) % secondTable.length;
+    protected int hashFunction2(T key) {
+        return MurmurHash3.hash32(key.hashCode(), seed2) & (secondTable.length - 1);
     }
 
     public void insert(T key) {
@@ -46,21 +57,21 @@ public class CuckooHashing<T> {
         for (int i = 0; i < threshold; i++) {
             Entry<T> entryToInsert = new Entry<>(keyToInsert);
             int index1 = hashFunction1(keyToInsert);
+            // System.out.println("KEY " + keyToInsert + " -> HASH = " + index1);
             keyToInsert = firstTable[index1] != null ? firstTable[index1].key : null;
             firstTable[index1] = entryToInsert;
             if (keyToInsert == null) {
                 size++;
-                if (size / capacity > loadFactor) rehash();
                 return;
             }
 
             entryToInsert = new Entry<>(keyToInsert);
             int index2 = hashFunction2(keyToInsert);
+            // System.out.println("KEY " + keyToInsert + " -> HASH = " + index2);
             keyToInsert = secondTable[index2] != null ? secondTable[index2].key : null;
             secondTable[index2] = entryToInsert;
             if (keyToInsert == null) {
                 size++;
-                if (size / capacity > loadFactor) rehash();
                 return;
             }
         }
@@ -78,12 +89,12 @@ public class CuckooHashing<T> {
     public boolean remove(T key) {
         int index1 = hashFunction1(key);
         int index2 = hashFunction2(key);
-        if (firstTable[index1].key.equals(key)) {
+        if (firstTable[index1] != null && firstTable[index1].key.equals(key)) {
             firstTable[index1] = null;
             size--;
             return true;
         }
-        if (secondTable[index2].key.equals(key)) {
+        if (secondTable[index2] != null && secondTable[index2].key.equals(key)) {
             secondTable[index2] = null;
             size--;
             return true;
@@ -91,16 +102,25 @@ public class CuckooHashing<T> {
         return false;
     }
 
-    private void rehash() {
-        if (size / capacity > loadFactor) {
-            capacity *= 2;
-            threshold = (int) Math.log(capacity);
-        }
+    protected void rehash() {
         Entry<T>[] tempFirstTable = firstTable;
         Entry<T>[] tempSecondTable = secondTable;
 
-        firstTable = new Entry[firstTable.length * 2];
-        secondTable = new Entry[secondTable.length * 2];
+        if ((double) size / capacity > loadFactor && capacity < MAXIMUM_CAPACITY) {
+            capacity *= 2;
+            threshold = (int) Math.ceil(3 * Math.log(capacity) / Math.log(2));
+
+            firstTable = new Entry[firstTable.length * 2];
+            secondTable = new Entry[secondTable.length * 2];
+        } else {
+            firstTable = new Entry[firstTable.length];
+            secondTable = new Entry[secondTable.length];
+        }
+
+        size = 0;
+
+        this.seed1 = random.nextInt();
+        this.seed2 = random.nextInt();
 
         for (int i = 0; i < tempFirstTable.length; i++) {
             if (tempFirstTable[i] != null)
@@ -140,7 +160,7 @@ public class CuckooHashing<T> {
     }
 
     public static void main(String[] args) {
-        CuckooHashing<Integer> cuckoo = new CuckooHashing<Integer>(20, 0.3F);
+        CuckooHashing<Integer> cuckoo = new CuckooHashing<Integer>(16, (double) 1 / 3);
         cuckoo.insert(2);
         System.out.println(cuckoo.lookup(2));
         System.out.println(cuckoo.lookup(3));
@@ -160,6 +180,12 @@ public class CuckooHashing<T> {
         cuckoo.insert(11);
         cuckoo.printHashTables();
         cuckoo.insert(21);
+        cuckoo.printHashTables();
+        cuckoo.insert(9);
+        cuckoo.printHashTables();
+        cuckoo.insert(29);
+        cuckoo.printHashTables();
+        cuckoo.insert(27);
         cuckoo.printHashTables();
     }
 

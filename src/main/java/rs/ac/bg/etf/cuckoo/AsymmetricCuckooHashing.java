@@ -1,18 +1,21 @@
 package rs.ac.bg.etf.cuckoo;
 
+import org.apache.commons.codec.digest.MurmurHash3;
+
 public class AsymmetricCuckooHashing<T> extends CuckooHashing<T> {
 
-    public AsymmetricCuckooHashing(int capacity, float loadFactor) {
-        this.size = 0;
-        this.capacity = capacity;
-        this.threshold = (int) Math.log(capacity);
-        this.loadFactor = loadFactor;
-        this.firstTable = new Entry[(int) Math.floor(capacity * 2 / 3)];
-        this.secondTable = new Entry[(int) Math.ceil(capacity / 3)];
+    public AsymmetricCuckooHashing() {
+        this(1536, (double) 1 / 3);
+    }
+
+    public AsymmetricCuckooHashing(int capacity, double loadFactor) {
+        super(capacity, loadFactor);
+        this.firstTable = new Entry[(int) Math.floor((double) capacity * 2 / 3)];
+        this.secondTable = new Entry[(int) Math.ceil((double) capacity / 3)];
     }
 
     public static void main(String[] args) {
-        CuckooHashing<Integer> cuckoo = new AsymmetricCuckooHashing<>(20, 0.3F);
+        CuckooHashing<Integer> cuckoo = new AsymmetricCuckooHashing<>(16, 0.3);
         cuckoo.insert(2);
         System.out.println(cuckoo.lookup(2));
         System.out.println(cuckoo.lookup(3));
