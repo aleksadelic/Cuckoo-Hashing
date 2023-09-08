@@ -3,33 +3,24 @@ package rs.ac.bg.etf.cuckoo;
 import java.util.Random;
 import org.apache.commons.codec.digest.MurmurHash3;
 
-public class CuckooHashing<T> {
+public class StandardCuckooHashTable<T> implements CuckooHashTable<T> {
 
-    int size;
-    int capacity;
-    int threshold;
-    double loadFactor;
-    Entry<T>[] firstTable;
-    Entry<T>[] secondTable;
+    private int size;
+    private int capacity;
+    private int threshold;
+    private final double loadFactor;
+    private static final int MAXIMUM_CAPACITY = 1073741824;
+    protected Entry<T>[] firstTable;
+    protected Entry<T>[] secondTable;
+    private final Random random;
+    private int seed1;
+    private int seed2;
 
-    static final int MAXIMUM_CAPACITY = 1073741824;
-    Random random;
-    int seed1;
-    int seed2;
-
-    class Entry<E> {
-        E key;
-
-        public Entry(E key) {
-            this.key = key;
-        }
-    }
-
-    public CuckooHashing() {
+    public StandardCuckooHashTable() {
         this(1024, (double) 1 / 3);
     }
 
-    public CuckooHashing(int capacity, double loadFactor) {
+    public StandardCuckooHashTable(int capacity, double loadFactor) {
         this.size = 0;
         this.capacity = capacity;
         this.threshold = (int) Math.ceil(3 * Math.log(capacity) / Math.log(2));
@@ -49,37 +40,36 @@ public class CuckooHashing<T> {
         return MurmurHash3.hash32(key.hashCode(), seed2) & (secondTable.length - 1);
     }
 
-    public void insert(T key) {
-        if (lookup(key)) {
-            return;
+    public boolean insert(T key) {
+        if (contains(key)) {
+            return false;
         }
         T keyToInsert = key;
         for (int i = 0; i < threshold; i++) {
             Entry<T> entryToInsert = new Entry<>(keyToInsert);
             int index1 = hashFunction1(keyToInsert);
-            // System.out.println("KEY " + keyToInsert + " -> HASH = " + index1);
             keyToInsert = firstTable[index1] != null ? firstTable[index1].key : null;
             firstTable[index1] = entryToInsert;
             if (keyToInsert == null) {
                 size++;
-                return;
+                return true;
             }
 
             entryToInsert = new Entry<>(keyToInsert);
             int index2 = hashFunction2(keyToInsert);
-            // System.out.println("KEY " + keyToInsert + " -> HASH = " + index2);
             keyToInsert = secondTable[index2] != null ? secondTable[index2].key : null;
             secondTable[index2] = entryToInsert;
             if (keyToInsert == null) {
                 size++;
-                return;
+                return true;
             }
         }
         rehash();
         insert(keyToInsert);
+        return true;
     }
 
-    public boolean lookup(T key) {
+    public boolean contains(T key) {
         int index1 = hashFunction1(key);
         if (firstTable[index1] != null && firstTable[index1].key.equals(key)) return true;
         int index2 = hashFunction2(key);
@@ -160,14 +150,14 @@ public class CuckooHashing<T> {
     }
 
     public static void main(String[] args) {
-        CuckooHashing<Integer> cuckoo = new CuckooHashing<Integer>(16, (double) 1 / 3);
+        StandardCuckooHashTable<Integer> cuckoo = new StandardCuckooHashTable<Integer>(16, (double) 1 / 3);
         cuckoo.insert(2);
-        System.out.println(cuckoo.lookup(2));
-        System.out.println(cuckoo.lookup(3));
+        System.out.println(cuckoo.contains(2));
+        System.out.println(cuckoo.contains(3));
         cuckoo.insert(3);
-        System.out.println(cuckoo.lookup(3));
+        System.out.println(cuckoo.contains(3));
         cuckoo.remove(2);
-        System.out.println(cuckoo.lookup(2));
+        System.out.println(cuckoo.contains(2));
         cuckoo.insert(4);
         cuckoo.insert(13);
         cuckoo.printHashTables();

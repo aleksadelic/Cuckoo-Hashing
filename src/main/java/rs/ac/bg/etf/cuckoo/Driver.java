@@ -7,10 +7,9 @@ import java.util.Random;
 
 public class Driver {
 
-    int[] numbersForInsertion;
-    int[] numbersForOperations;
-
-    Random random;
+    private int[] numbersForInsertion;
+    private int[] numbersForOperations;
+    private Random random;
 
     public Driver(int N) {
         this.random = new Random();
@@ -34,47 +33,54 @@ public class Driver {
         numbersForOperations = testData[1];
     }
 
-    private void test(CuckooHashing hashTable) {
+    private void testCuckoo(CuckooHashTable hashTable) {
         for (int i = 0; i < numbersForInsertion.length; i++) {
             hashTable.insert(numbersForInsertion[i]);
         }
         for (int i = 0; i < numbersForOperations.length; i += 4) {
-            hashTable.lookup(numbersForOperations[i]);
-            hashTable.lookup(numbersForOperations[i + 1]);
+            hashTable.contains(numbersForOperations[i]);
+            hashTable.contains(numbersForOperations[i + 1]);
             hashTable.remove(numbersForOperations[i + 2]);
             hashTable.insert(numbersForOperations[i + 3]);
         }
     }
 
-    public static void main(String[] args) {
-        System.out.println("GENERATING TEST DATA");
-        Driver driver = new Driver("testData1.txt");
-        System.out.println("GENERATED TEST DATA");
-        System.out.println("RUNNING...");
+    private void testJavaHashSet(HashSet hashTable) {
+        for (int i = 0; i < numbersForInsertion.length; i++) {
+            hashTable.add(numbersForInsertion[i]);
+        }
+        for (int i = 0; i < numbersForOperations.length; i += 4) {
+            hashTable.contains(numbersForOperations[i]);
+            hashTable.contains(numbersForOperations[i + 1]);
+            hashTable.remove(numbersForOperations[i + 2]);
+            hashTable.add(numbersForOperations[i + 3]);
+        }
+    }
 
-        CuckooHashing<Integer> cuckoo = new CuckooHashing<>();
-        AsymmetricCuckooHashing<Integer> asymmetricCuckoo = new AsymmetricCuckooHashing<>();
+    public static void main(String[] args) {
+        Driver driver = new Driver("testData1.txt");
+
+        StandardCuckooHashTable<Integer> cuckoo = new StandardCuckooHashTable<>();
+        AsymmetricCuckooHashTable<Integer> asymmetricCuckoo = new AsymmetricCuckooHashTable<>();
         HashSet<Integer> set = new HashSet<>();
+
         Instant start = Instant.now();
-        driver.test(cuckoo);
+        driver.testCuckoo(cuckoo);
         Instant end = Instant.now();
         Duration elapsedTime = Duration.between(start, end);
         System.out.println("Cuckoo: " + elapsedTime.toMillis());
 
         start = Instant.now();
-        driver.test(asymmetricCuckoo);
+        driver.testCuckoo(asymmetricCuckoo);
         end = Instant.now();
         elapsedTime = Duration.between(start, end);
         System.out.println("Asymmetric Cuckoo: " + elapsedTime.toMillis());
 
         start = Instant.now();
-        for (int i = 0; i < driver.numbersForInsertion.length; i++) {
-            set.add(driver.numbersForInsertion[i]);
-        }
+        driver.testJavaHashSet(set);
         end = Instant.now();
         elapsedTime = Duration.between(start, end);
-        System.out.println("Java: " + elapsedTime.toMillis());
-
+        System.out.println("Java HashSet: " + elapsedTime.toMillis());
     }
 
 }
