@@ -13,9 +13,13 @@ public class Driver {
     private int[] insertionTimes;
     private int[] deletionTimes;
 
-    public Driver(int N) {
+    public Driver(int N, boolean isRandom) {
         this.N = N;
-        initializeData();
+        if (isRandom) {
+            initializeRandomData();
+        } else {
+            initializeData();
+        }
         initializeTimesArrays();
     }
 
@@ -39,6 +43,12 @@ public class Driver {
 
     private void initializeDataFromFile(String fileName) {
         int[][] testData = Generator.readTestDataFromFile(fileName);
+        numbersForInsertion = testData[0];
+        numbersForOperations = testData[1];
+    }
+
+    private void initializeRandomData() {
+        int[][] testData = Generator.generateRandomTestData(N);
         numbersForInsertion = testData[0];
         numbersForOperations = testData[1];
     }
@@ -80,14 +90,13 @@ public class Driver {
         initializeTimesArrays();
     }
 
-    private void testCuckoo(CuckooHashTable hashTable, String name, boolean testOperations) {
+    private long testCuckoo(CuckooHashTable hashTable, String name, boolean testOperations) {
         for (int i = 0; i < numbersForInsertion.length; i++) {
             hashTable.insert(numbersForInsertion[i]);
         }
 
         if (testOperations) {
-            testCuckooWithOperations(hashTable, name);
-            return;
+            return testCuckooWithOperations(hashTable, name);
         }
 
         Instant start = Instant.now();
@@ -99,10 +108,11 @@ public class Driver {
         }
         Instant end = Instant.now();
         Duration elapsedTime = Duration.between(start, end);
-        System.out.println(name + ": " + elapsedTime.toMillis());
+        System.out.println(name + ": " + elapsedTime.toMillis() + " ms, buckets allocated: " + hashTable.getCapacity());
+        return elapsedTime.toMillis();
     }
 
-    public void testCuckooWithOperations(CuckooHashTable hashTable, String name) {
+    public long testCuckooWithOperations(CuckooHashTable hashTable, String name) {
         int lookupTimesIndex = 0;
         int insertionTimesIndex = 0;
         int deletionTimesIndex = 0;
@@ -138,17 +148,17 @@ public class Driver {
         Instant end = Instant.now();
         Duration elapsedTime = Duration.between(start, end);
         analyzeOperationPerformance(name);
-        System.out.println(name + ": " + elapsedTime.toMillis());
+        System.out.println(name + ": " + elapsedTime.toMillis() + " ms, buckets allocated: " + hashTable.getCapacity());
+        return elapsedTime.toMillis();
     }
 
-    public void testJavaHashSet(HashSet hashTable, boolean testOperations) {
+    public long testJavaHashSet(HashSet hashTable, boolean testOperations) {
         for (int i = 0; i < numbersForInsertion.length; i++) {
             hashTable.add(numbersForInsertion[i]);
         }
 
         if (testOperations) {
-            testJavaHashSetWithOperations(hashTable);
-            return;
+            return testJavaHashSetWithOperations(hashTable);
         }
 
         Instant start = Instant.now();
@@ -160,10 +170,11 @@ public class Driver {
         }
         Instant end = Instant.now();
         Duration elapsedTime = Duration.between(start, end);
-        System.out.println("Java HashSet: " + elapsedTime.toMillis());
+        System.out.println("Java HashSet: " + elapsedTime.toMillis() + " ms");
+        return elapsedTime.toMillis();
     }
 
-    public void testJavaHashSetWithOperations(HashSet hashTable) {
+    public long testJavaHashSetWithOperations(HashSet hashTable) {
         int lookupTimesIndex = 0;
         int insertionTimesIndex = 0;
         int deletionTimesIndex = 0;
@@ -199,7 +210,8 @@ public class Driver {
         Instant end = Instant.now();
         Duration elapsedTime = Duration.between(start, end);
         analyzeOperationPerformance("Java HashSet");
-        System.out.println("Java HashSet: " + elapsedTime.toMillis());
+        System.out.println("Java HashSet: " + elapsedTime.toMillis() + " ms");
+        return elapsedTime.toMillis();
     }
 
     public static void main(String[] args) {
@@ -207,16 +219,31 @@ public class Driver {
         if (args.length != 0 && args[0].equals("-testOperations")) {
             testOperations = true;
         }
-        Driver driver = new Driver("testData2.txt");
-        // Driver driver = new Driver(1000);
+        Driver driver = new Driver("dataset18.txt");
+        // Driver driver = new Driver(100000, true);
 
         StandardCuckooHashTable<Integer> cuckoo = new StandardCuckooHashTable<>();
         AsymmetricCuckooHashTable<Integer> asymmetricCuckoo = new AsymmetricCuckooHashTable<>();
+        BlockedCuckooHashTable<Integer> blockedCuckooHashTable = new BlockedCuckooHashTable<>(1024, 0.8, 4);
         HashSet<Integer> set = new HashSet<>();
 
-        driver.testCuckoo(cuckoo, "Cuckoo", testOperations);
-        driver.testCuckoo(asymmetricCuckoo, "Asymmetric Cuckoo", testOperations);
-        driver.testJavaHashSet(set, testOperations);
+        int N = 10;
+        long cuckooTotal = 0;
+        long asymmetricCuckooTotal = 0;
+        long blockedCuckooTotal = 0;
+        long hashSetTotal = 0;
+
+        for (int i = 0; i < N; i++) {
+            cuckooTotal += driver.testCuckoo(cuckoo, "Standard Cuckoo", testOperations);
+            asymmetricCuckooTotal += driver.testCuckoo(asymmetricCuckoo, "Asymmetric Cuckoo", testOperations);
+            blockedCuckooTotal += driver.testCuckoo(blockedCuckooHashTable, "Blocked Cuckoo", testOperations);
+            hashSetTotal += driver.testJavaHashSet(set, testOperations);
+        }
+
+        System.out.println("Standard Cuckoo: " + (double) cuckooTotal / N + " ms");
+        System.out.println("Asymmetric Cuckoo: " + (double) asymmetricCuckooTotal / N + " ms");
+        System.out.println("Blocked Cuckoo: " + (double) blockedCuckooTotal / N + " ms");
+        System.out.println("Java HashSet: " + (double) hashSetTotal / N + " ms");
     }
 
 }

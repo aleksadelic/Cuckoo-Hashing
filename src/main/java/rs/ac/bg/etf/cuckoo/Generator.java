@@ -48,8 +48,11 @@ public class Generator {
             int randomDeletion = setArray[randomIndex];
             numbersForOperations[i] = randomLookup;
 
-            // Generate number for successful or unsuccessful lookup
+            // Generate number for unsuccessful lookup
             int randomNumber = random.nextInt(Integer.MAX_VALUE);
+            while (set.contains(randomNumber)) {
+                randomNumber = random.nextInt(Integer.MAX_VALUE);
+            }
             numbersForOperations[i + 1] = randomNumber;
 
             // Generate random number to be deleted
@@ -60,11 +63,26 @@ public class Generator {
             int randomInsertion = random.nextInt(Integer.MAX_VALUE);
             numbersForOperations[i + 3] = randomInsertion;
             set.add(randomInsertion);
-
-            if (i % 10000 == 0) {
-                System.out.println(i);
-            }
         }
+        return new int[][]{numbersForInsertion, numbersForOperations};
+    }
+
+    public static int[][] generateRandomTestData(int N) {
+        int[] numbersForInsertion;
+        int[] numbersForOperations;
+
+        Set<Integer> set = new HashSet<>();
+        while (set.size() < N) {
+            set.add(random.nextInt(5 * N));
+        }
+        numbersForInsertion = set.stream().mapToInt(Integer::intValue).toArray();
+
+        numbersForOperations = new int[3 * N * 4];
+
+        for (int i = 0; i < numbersForOperations.length; i++) {
+            numbersForOperations[i] = random.nextInt(5 * N);
+        }
+
         return new int[][]{numbersForInsertion, numbersForOperations};
     }
 
@@ -88,7 +106,9 @@ public class Generator {
     }
 
     public static void main(String[] args) {
-        Generator.generateTestDataFile(100000, "testData1.txt");
+        for (int i = 8; i <= 19; i++) {
+            Generator.generateTestDataFile(1 << i, "dataset" + i + ".txt");
+        }
     }
 
 }
