@@ -219,31 +219,46 @@ public class Driver {
         if (args.length != 0 && args[0].equals("-testOperations")) {
             testOperations = true;
         }
-        Driver driver = new Driver("dataset18.txt");
-        // Driver driver = new Driver(100000, true);
 
-        StandardCuckooHashTable<Integer> cuckoo = new StandardCuckooHashTable<>();
-        AsymmetricCuckooHashTable<Integer> asymmetricCuckoo = new AsymmetricCuckooHashTable<>();
-        BlockedCuckooHashTable<Integer> blockedCuckooHashTable = new BlockedCuckooHashTable<>(1024, 0.8, 4);
-        HashSet<Integer> set = new HashSet<>();
+        int n = 10;
+        int[] xAxis = new int[11];
+        double[][] yAxis = new double[4][11];
+        String[] names = new String[]{"Cuckoo", "Asymmetric Cuckoo", "Blocked Cuckoo", "Java HashSet"};
 
-        int N = 10;
-        long cuckooTotal = 0;
-        long asymmetricCuckooTotal = 0;
-        long blockedCuckooTotal = 0;
-        long hashSetTotal = 0;
+        for (int i = 0; i <= 10; i++) {
+            int N = i + 8;
+            Driver driver = new Driver("dataset" + N + ".txt");
 
-        for (int i = 0; i < N; i++) {
-            cuckooTotal += driver.testCuckoo(cuckoo, "Standard Cuckoo", testOperations);
-            asymmetricCuckooTotal += driver.testCuckoo(asymmetricCuckoo, "Asymmetric Cuckoo", testOperations);
-            blockedCuckooTotal += driver.testCuckoo(blockedCuckooHashTable, "Blocked Cuckoo", testOperations);
-            hashSetTotal += driver.testJavaHashSet(set, testOperations);
+            StandardCuckooHashTable<Integer> cuckoo = new StandardCuckooHashTable<>(16, (double) 1 / 3);
+            AsymmetricCuckooHashTable<Integer> asymmetricCuckoo = new AsymmetricCuckooHashTable<>(24, (double) 1 / 3);
+            BlockedCuckooHashTable<Integer> blockedCuckooHashTable = new BlockedCuckooHashTable<>(16, 0.8, 4);
+            HashSet<Integer> set = new HashSet<>();
+
+            long cuckooTotal = 0;
+            long asymmetricCuckooTotal = 0;
+            long blockedCuckooTotal = 0;
+            long hashSetTotal = 0;
+
+            for (int j = 0; j < n; j++) {
+                cuckooTotal += driver.testCuckoo(cuckoo, "Standard Cuckoo", testOperations);
+                asymmetricCuckooTotal += driver.testCuckoo(asymmetricCuckoo, "Asymmetric Cuckoo", testOperations);
+                blockedCuckooTotal += driver.testCuckoo(blockedCuckooHashTable, "Blocked Cuckoo", testOperations);
+                hashSetTotal += driver.testJavaHashSet(set, testOperations);
+            }
+
+            double avgCuckoo = (double) cuckooTotal / n;
+            double avgAsymmetricCuckoo = (double) asymmetricCuckooTotal / n;
+            double avgBlockedCuckoo = (double) blockedCuckooTotal / n;
+            double avgHashSet = (double) hashSetTotal / n;
+
+            xAxis[i] = N;
+            yAxis[0][i] = avgCuckoo;
+            yAxis[1][i] = avgAsymmetricCuckoo;
+            yAxis[2][i] = avgBlockedCuckoo;
+            yAxis[3][i] = avgHashSet;
         }
 
-        System.out.println("Standard Cuckoo: " + (double) cuckooTotal / N + " ms");
-        System.out.println("Asymmetric Cuckoo: " + (double) asymmetricCuckooTotal / N + " ms");
-        System.out.println("Blocked Cuckoo: " + (double) blockedCuckooTotal / N + " ms");
-        System.out.println("Java HashSet: " + (double) hashSetTotal / N + " ms");
+        Plot.plotResults(xAxis, yAxis, names);
     }
 
 }

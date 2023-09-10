@@ -63,6 +63,10 @@ public class Generator {
             int randomInsertion = random.nextInt(Integer.MAX_VALUE);
             numbersForOperations[i + 3] = randomInsertion;
             set.add(randomInsertion);
+
+            if (i % 10000 == 0) {
+                System.out.println(i);
+            }
         }
         return new int[][]{numbersForInsertion, numbersForOperations};
     }
@@ -106,9 +110,10 @@ public class Generator {
     }
 
     public static void main(String[] args) {
-        for (int i = 8; i <= 19; i++) {
+        /*for (int i = 8; i <= 19; i++) {
             Generator.generateTestDataFile(1 << i, "dataset" + i + ".txt");
-        }
+        }*/
+        Generator.generateTestDataFile(1 << 19, "dataset19.txt");
     }
 
 }
