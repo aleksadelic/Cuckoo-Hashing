@@ -38,8 +38,8 @@ public class Generator {
         }
         numbersForInsertion = set.stream().mapToInt(Integer::intValue).toArray();
 
-        numbersForOperations = new int[3 * N * 4];
-        for (int i = 0; i < numbersForOperations.length; i += 4) {
+        numbersForOperations = new int[3 * N * 6];
+        for (int i = 0; i < numbersForOperations.length; i += 6) {
             // Generate number for successful lookup
             Integer[] setArray = set.toArray(new Integer[0]);
             int randomIndex = random.nextInt(setArray.length);
@@ -48,20 +48,34 @@ public class Generator {
             int randomDeletion = setArray[randomIndex];
             numbersForOperations[i] = randomLookup;
 
+            /////////
+            randomIndex = random.nextInt(setArray.length);
+            randomLookup = setArray[randomIndex];
+            numbersForOperations[i + 1] = randomLookup;
+            /////////
+
             // Generate number for unsuccessful lookup
             int randomNumber = random.nextInt(Integer.MAX_VALUE);
             while (set.contains(randomNumber)) {
                 randomNumber = random.nextInt(Integer.MAX_VALUE);
             }
-            numbersForOperations[i + 1] = randomNumber;
+            numbersForOperations[i + 2] = randomNumber;
+
+            ///////////
+            randomNumber = random.nextInt(Integer.MAX_VALUE);
+            while (set.contains(randomNumber)) {
+                randomNumber = random.nextInt(Integer.MAX_VALUE);
+                numbersForOperations[i + 3] = randomNumber;
+            }
+            //////////
 
             // Generate random number to be deleted
-            numbersForOperations[i + 2] = randomDeletion;
+            numbersForOperations[i + 4] = randomDeletion;
             set.remove(randomDeletion);
 
             // Generate random number to be inserted
             int randomInsertion = random.nextInt(Integer.MAX_VALUE);
-            numbersForOperations[i + 3] = randomInsertion;
+            numbersForOperations[i + 5] = randomInsertion;
             set.add(randomInsertion);
 
             if (i % 10000 == 0) {
@@ -110,10 +124,9 @@ public class Generator {
     }
 
     public static void main(String[] args) {
-        /*for (int i = 8; i <= 19; i++) {
+        for (int i = 8; i <= 18; i++) {
             Generator.generateTestDataFile(1 << i, "dataset" + i + ".txt");
-        }*/
-        Generator.generateTestDataFile(1 << 19, "dataset19.txt");
+        }
     }
 
 }

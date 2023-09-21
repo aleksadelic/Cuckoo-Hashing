@@ -1,12 +1,15 @@
 package rs.ac.bg.etf.cuckoo;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryMXBean;
+import java.lang.management.MemoryUsage;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashSet;
 
 public class Driver {
 
-    private int N;
+    private final int N;
     private int[] numbersForInsertion;
     private int[] numbersForOperations;
     private int[] lookupTimes;
@@ -27,6 +30,28 @@ public class Driver {
         initializeDataFromFile(filePath);
         N = numbersForInsertion.length;
         initializeTimesArrays();
+    }
+
+    static class Result {
+        long runtime;
+        int bucketsAllocated;
+        long memoryUsed;
+
+        Result(long runtime, int bucketsAllocated, long memoryUsed) {
+            Result.this.runtime = runtime;
+            Result.this.bucketsAllocated = bucketsAllocated;
+            Result.this.memoryUsed = memoryUsed;
+        }
+
+        Result() {
+            this(0, 0, 0);
+        }
+
+        void add(Result result) {
+            Result.this.runtime += result.runtime;
+            Result.this.bucketsAllocated += result.bucketsAllocated;
+            Result.this.memoryUsed += result.memoryUsed;
+        }
     }
 
     private void initializeTimesArrays() {
@@ -90,7 +115,7 @@ public class Driver {
         initializeTimesArrays();
     }
 
-    private long testCuckoo(CuckooHashTable hashTable, String name, boolean testOperations) {
+    private Result testCuckoo(StandardCuckooHashTable hashTable, String name, boolean testOperations) {
         for (int i = 0; i < numbersForInsertion.length; i++) {
             hashTable.insert(numbersForInsertion[i]);
         }
@@ -103,16 +128,24 @@ public class Driver {
         for (int i = 0; i < numbersForOperations.length; i += 4) {
             hashTable.contains(numbersForOperations[i]);
             hashTable.contains(numbersForOperations[i + 1]);
+            ////////
+            //hashTable.contains(numbersForOperations[i + 2]);
+            //hashTable.contains(numbersForOperations[i + 3]);
             hashTable.remove(numbersForOperations[i + 2]);
             hashTable.insert(numbersForOperations[i + 3]);
         }
         Instant end = Instant.now();
         Duration elapsedTime = Duration.between(start, end);
-        System.out.println(name + ": " + elapsedTime.toMillis() + " ms, buckets allocated: " + hashTable.getCapacity());
-        return elapsedTime.toMillis();
+
+        MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
+        MemoryUsage heapMemoryUsage = memoryBean.getHeapMemoryUsage();
+
+        System.out.println(name + ": " + elapsedTime.toMillis() + " ms, buckets allocated: " + hashTable.getCapacity() +
+                ", heap usage: " + heapMemoryUsage);
+        return new Result(elapsedTime.toMillis(), hashTable.getCapacity(), heapMemoryUsage.getUsed());
     }
 
-    public long testCuckooWithOperations(CuckooHashTable hashTable, String name) {
+    public Result testCuckooWithOperations(StandardCuckooHashTable hashTable, String name) {
         int lookupTimesIndex = 0;
         int insertionTimesIndex = 0;
         int deletionTimesIndex = 0;
@@ -148,11 +181,15 @@ public class Driver {
         Instant end = Instant.now();
         Duration elapsedTime = Duration.between(start, end);
         analyzeOperationPerformance(name);
+
+        MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
+        MemoryUsage heapMemoryUsage = memoryBean.getHeapMemoryUsage();
+
         System.out.println(name + ": " + elapsedTime.toMillis() + " ms, buckets allocated: " + hashTable.getCapacity());
-        return elapsedTime.toMillis();
+        return new Result(elapsedTime.toMillis(), hashTable.getCapacity(), heapMemoryUsage.getUsed());
     }
 
-    public long testJavaHashSet(HashSet hashTable, boolean testOperations) {
+    public Result testJavaHashSet(HashSet hashTable, boolean testOperations) {
         for (int i = 0; i < numbersForInsertion.length; i++) {
             hashTable.add(numbersForInsertion[i]);
         }
@@ -165,16 +202,23 @@ public class Driver {
         for (int i = 0; i < numbersForOperations.length; i += 4) {
             hashTable.contains(numbersForOperations[i]);
             hashTable.contains(numbersForOperations[i + 1]);
+            ///////
+            //hashTable.contains(numbersForOperations[i + 2]);
+            //hashTable.contains(numbersForOperations[i + 3]);
             hashTable.remove(numbersForOperations[i + 2]);
             hashTable.add(numbersForOperations[i + 3]);
         }
         Instant end = Instant.now();
         Duration elapsedTime = Duration.between(start, end);
-        System.out.println("Java HashSet: " + elapsedTime.toMillis() + " ms");
-        return elapsedTime.toMillis();
+
+        MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
+        MemoryUsage heapMemoryUsage = memoryBean.getHeapMemoryUsage();
+
+        System.out.println("Java HashSet: " + elapsedTime.toMillis() + " ms" + ", heap usage: " + heapMemoryUsage);
+        return new Result(elapsedTime.toMillis(), 0, heapMemoryUsage.getUsed());
     }
 
-    public long testJavaHashSetWithOperations(HashSet hashTable) {
+    public Result testJavaHashSetWithOperations(HashSet hashTable) {
         int lookupTimesIndex = 0;
         int insertionTimesIndex = 0;
         int deletionTimesIndex = 0;
@@ -210,8 +254,12 @@ public class Driver {
         Instant end = Instant.now();
         Duration elapsedTime = Duration.between(start, end);
         analyzeOperationPerformance("Java HashSet");
-        System.out.println("Java HashSet: " + elapsedTime.toMillis() + " ms");
-        return elapsedTime.toMillis();
+
+        MemoryMXBean memoryBean = ManagementFactory.getMemoryMXBean();
+        MemoryUsage heapMemoryUsage = memoryBean.getHeapMemoryUsage();
+
+        System.out.println("Java HashSet: " + elapsedTime.toMillis() + " ms" + ", heap usage: " + heapMemoryUsage);
+        return new Result(elapsedTime.toMillis(), 0, heapMemoryUsage.getUsed());
     }
 
     public static void main(String[] args) {
@@ -222,43 +270,65 @@ public class Driver {
 
         int n = 10;
         int[] xAxis = new int[11];
-        double[][] yAxis = new double[4][11];
+        double[][][] yAxis = new double[3][4][11];
         String[] names = new String[]{"Cuckoo", "Asymmetric Cuckoo", "Blocked Cuckoo", "Java HashSet"};
 
         for (int i = 0; i <= 10; i++) {
             int N = i + 8;
-            Driver driver = new Driver("dataset" + N + ".txt");
+            Driver driver = new Driver("dataset1/dataset" + N + ".txt");
+            // Driver driver = new Driver(1 << N, true);
 
-            StandardCuckooHashTable<Integer> cuckoo = new StandardCuckooHashTable<>(16, (double) 1 / 3);
-            AsymmetricCuckooHashTable<Integer> asymmetricCuckoo = new AsymmetricCuckooHashTable<>(24, (double) 1 / 3);
-            BlockedCuckooHashTable<Integer> blockedCuckooHashTable = new BlockedCuckooHashTable<>(16, 0.8, 4);
-            HashSet<Integer> set = new HashSet<>();
-
-            long cuckooTotal = 0;
-            long asymmetricCuckooTotal = 0;
-            long blockedCuckooTotal = 0;
-            long hashSetTotal = 0;
+            Result cuckooTotal = new Result();
+            Result asymmetricCuckooTotal = new Result();
+            Result blockedCuckooTotal = new Result();
+            Result hashSetTotal = new Result();
 
             for (int j = 0; j < n; j++) {
-                cuckooTotal += driver.testCuckoo(cuckoo, "Standard Cuckoo", testOperations);
-                asymmetricCuckooTotal += driver.testCuckoo(asymmetricCuckoo, "Asymmetric Cuckoo", testOperations);
-                blockedCuckooTotal += driver.testCuckoo(blockedCuckooHashTable, "Blocked Cuckoo", testOperations);
-                hashSetTotal += driver.testJavaHashSet(set, testOperations);
+                StandardCuckooHashTable<Integer> cuckoo = new StandardCuckooHashTable<>(16, (double) 5 / 12);
+                AsymmetricCuckooHashTable<Integer> asymmetricCuckoo = new AsymmetricCuckooHashTable<>(24, (double) 5 / 12);
+                BlockedCuckooHashTable<Integer> blockedCuckooHashTable = new BlockedCuckooHashTable<>(16, 0.9, 4);
+                HashSet<Integer> set = new HashSet<>();
+                /*BlockedCuckooHashTable<Integer> cuckoo =  new BlockedCuckooHashTable<>(16, 0.8, 2);
+                BlockedCuckooHashTable<Integer> asymmetricCuckoo =  new BlockedCuckooHashTable<>(16, 0.9, 4);
+                BlockedCuckooHashTable<Integer> blockedCuckooHashTable =  new BlockedCuckooHashTable<>(16, 0.9, 8);
+                BlockedCuckooHashTable<Integer> set =  new BlockedCuckooHashTable<>(16, 0.9, 8);*/
+
+                cuckooTotal.add(driver.testCuckoo(cuckoo, "Standard Cuckoo", testOperations));
+                cuckoo = null;
+                System.gc();
+                asymmetricCuckooTotal.add(driver.testCuckoo(asymmetricCuckoo, "Asymmetric Cuckoo", testOperations));
+                asymmetricCuckoo = null;
+                System.gc();
+                blockedCuckooTotal.add(driver.testCuckoo(blockedCuckooHashTable, "Blocked Cuckoo", testOperations));
+                blockedCuckooHashTable = null;
+                System.gc();
+                hashSetTotal.add(driver.testJavaHashSet(set, testOperations));
+                //hashSetTotal.add(driver.testCuckoo(set,"random", testOperations));
+                set = null;
+                System.gc();
             }
 
-            double avgCuckoo = (double) cuckooTotal / n;
-            double avgAsymmetricCuckoo = (double) asymmetricCuckooTotal / n;
-            double avgBlockedCuckoo = (double) blockedCuckooTotal / n;
-            double avgHashSet = (double) hashSetTotal / n;
-
             xAxis[i] = N;
-            yAxis[0][i] = avgCuckoo;
-            yAxis[1][i] = avgAsymmetricCuckoo;
-            yAxis[2][i] = avgBlockedCuckoo;
-            yAxis[3][i] = avgHashSet;
+            yAxis[0][0][i] = (double) cuckooTotal.runtime / n;
+            yAxis[0][1][i] = (double) asymmetricCuckooTotal.runtime / n;
+            yAxis[0][2][i] = (double) blockedCuckooTotal.runtime / n;
+            yAxis[0][3][i] = (double) hashSetTotal.runtime / n;
+
+            yAxis[1][0][i] = (double) cuckooTotal.bucketsAllocated / n;
+            yAxis[1][1][i] = (double) asymmetricCuckooTotal.bucketsAllocated / n;
+            yAxis[1][2][i] = (double) blockedCuckooTotal.bucketsAllocated / n;
+            yAxis[1][3][i] = (double) hashSetTotal.bucketsAllocated / n;
+
+            yAxis[2][0][i] = (double) cuckooTotal.memoryUsed / n;
+            yAxis[2][1][i] = (double) asymmetricCuckooTotal.memoryUsed / n;
+            yAxis[2][2][i] = (double) blockedCuckooTotal.memoryUsed / n;
+            yAxis[2][3][i] = (double) hashSetTotal.memoryUsed / n;
+
         }
 
-        Plot.plotResults(xAxis, yAxis, names);
+        Plotter.plotResults(xAxis, yAxis[0], names, "Cuckoo Hashing Variants Runtime", "runtime [ms]", "runtime.png");
+        Plotter.plotResults(xAxis, yAxis[1], names, "Cuckoo Hashing Variants Buckets Allocated", "buckets", "buckets.png");
+        Plotter.plotResults(xAxis, yAxis[2], names, "Cuckoo Hashing Variants Memory Usage", "memory", "memory.png");
     }
 
 }

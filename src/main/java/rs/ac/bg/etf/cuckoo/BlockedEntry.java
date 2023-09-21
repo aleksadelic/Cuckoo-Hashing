@@ -2,12 +2,16 @@ package rs.ac.bg.etf.cuckoo;
 
 import java.util.Random;
 
-public class BlockedEntry<T> {
-    T[] keys;
+public class BlockedEntry<T> extends Entry<T> {
+    private T[] keys;
 
     public BlockedEntry(T key, int blockSize) {
         keys = (T[]) new Object[blockSize];
         keys[0] = key;
+    }
+
+    public T[] getKeys() {
+        return keys;
     }
 
     public T insert(T key) {

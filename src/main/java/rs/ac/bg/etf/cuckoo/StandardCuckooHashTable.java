@@ -5,16 +5,16 @@ import org.apache.commons.codec.digest.MurmurHash3;
 
 public class StandardCuckooHashTable<T> implements CuckooHashTable<T> {
 
-    private int size;
-    private int capacity;
-    private int threshold;
-    private final double loadFactor;
-    private static final int MAXIMUM_CAPACITY = 1073741824;
+    protected int size;
+    protected int capacity;
+    protected int threshold;
+    protected final double loadFactor;
+    protected static final int MAXIMUM_CAPACITY = 1073741824;
     protected Entry<T>[] firstTable;
     protected Entry<T>[] secondTable;
-    private final Random random;
-    private int seed1;
-    private int seed2;
+    protected final Random random;
+    protected int seed1;
+    protected int seed2;
 
     public StandardCuckooHashTable() {
         this(1024, (double) 1 / 3);
@@ -37,11 +37,13 @@ public class StandardCuckooHashTable<T> implements CuckooHashTable<T> {
     }
 
     protected int hashFunction1(T key) {
-        return MurmurHash3.hash32(key.hashCode(), seed1) & (firstTable.length - 1);
+        return MurmurHash3.hash32(key.hashCode(), seed1) &
+                (firstTable.length - 1);
     }
 
     protected int hashFunction2(T key) {
-        return MurmurHash3.hash32(key.hashCode(), seed2) & (secondTable.length - 1);
+        return MurmurHash3.hash32(key.hashCode(), seed2) &
+                (secondTable.length - 1);
     }
 
     public boolean insert(T key) {
@@ -50,24 +52,25 @@ public class StandardCuckooHashTable<T> implements CuckooHashTable<T> {
         }
         T keyToInsert = key;
         for (int i = 0; i < threshold; i++) {
-            Entry<T> entryToInsert = new Entry<>(keyToInsert);
+            SingleEntry<T> entryToInsert = new SingleEntry<>(keyToInsert);
             int index1 = hashFunction1(keyToInsert);
-            keyToInsert = firstTable[index1] != null ? firstTable[index1].key : null;
+            keyToInsert = firstTable[index1] != null ? ((SingleEntry<T>) firstTable[index1]).getKey() : null;
             firstTable[index1] = entryToInsert;
             if (keyToInsert == null) {
                 size++;
                 return true;
             }
 
-            entryToInsert = new Entry<>(keyToInsert);
+            entryToInsert = new SingleEntry<>(keyToInsert);
             int index2 = hashFunction2(keyToInsert);
-            keyToInsert = secondTable[index2] != null ? secondTable[index2].key : null;
+            keyToInsert = secondTable[index2] != null ? ((SingleEntry<T>) secondTable[index2]).getKey() : null;
             secondTable[index2] = entryToInsert;
             if (keyToInsert == null) {
                 size++;
                 return true;
             }
         }
+        // If the key is not inserted in maximum allowed iterations, rehash
         rehash();
         insert(keyToInsert);
         return true;
@@ -75,20 +78,20 @@ public class StandardCuckooHashTable<T> implements CuckooHashTable<T> {
 
     public boolean contains(T key) {
         int index1 = hashFunction1(key);
-        if (firstTable[index1] != null && firstTable[index1].key.equals(key)) return true;
+        if (firstTable[index1] != null && ((SingleEntry<T>) firstTable[index1]).getKey().equals(key)) return true;
         int index2 = hashFunction2(key);
-        return secondTable[index2] != null && secondTable[index2].key.equals(key);
+        return secondTable[index2] != null && ((SingleEntry<T>) secondTable[index2]).getKey().equals(key);
     }
 
     public boolean remove(T key) {
         int index1 = hashFunction1(key);
-        if (firstTable[index1] != null && firstTable[index1].key.equals(key)) {
+        if (firstTable[index1] != null && ((SingleEntry<T>) firstTable[index1]).getKey().equals(key)) {
             firstTable[index1] = null;
             size--;
             return true;
         }
         int index2 = hashFunction2(key);
-        if (secondTable[index2] != null && secondTable[index2].key.equals(key)) {
+        if (secondTable[index2] != null && ((SingleEntry<T>) secondTable[index2]).getKey().equals(key)) {
             secondTable[index2] = null;
             size--;
             return true;
@@ -118,69 +121,12 @@ public class StandardCuckooHashTable<T> implements CuckooHashTable<T> {
 
         for (int i = 0; i < tempFirstTable.length; i++) {
             if (tempFirstTable[i] != null)
-                insert(tempFirstTable[i].key);
+                insert(((SingleEntry<T>) tempFirstTable[i]).getKey());
         }
         for (int i = 0; i < tempSecondTable.length; i++) {
             if (tempSecondTable[i] != null)
-                insert(tempSecondTable[i].key);
+                insert(((SingleEntry<T>)tempSecondTable[i]).getKey());
         }
-    }
-
-    public void printHashTables() {
-        for (int i = 0; i < firstTable.length; i++) {
-            System.out.print("|  " + i + "  ");
-        }
-        System.out.println("|");
-        for (int i = 0; i < firstTable.length; i++) {
-            System.out.print("______");
-        }
-        System.out.println();
-        for (int i = 0; i < firstTable.length; i++) {
-            System.out.print("|  ");
-            if (firstTable[i] != null) System.out.print(firstTable[i].key + "  ");
-            else System.out.print("   ");
-        }
-        System.out.println("|");
-        for (int i = 0; i < firstTable.length; i++) {
-            System.out.print("______");
-        }
-        System.out.println();
-        for (int i = 0; i < secondTable.length; i++) {
-            System.out.print("|  ");
-            if (secondTable[i] != null) System.out.print(secondTable[i].key + "  ");
-            else System.out.print("   ");
-        }
-        System.out.println("|\n\n");
-    }
-
-    public static void main(String[] args) {
-        StandardCuckooHashTable<Integer> cuckoo = new StandardCuckooHashTable<Integer>(16, (double) 1 / 3);
-        cuckoo.insert(2);
-        System.out.println(cuckoo.contains(2));
-        System.out.println(cuckoo.contains(3));
-        cuckoo.insert(3);
-        System.out.println(cuckoo.contains(3));
-        cuckoo.remove(2);
-        System.out.println(cuckoo.contains(2));
-        cuckoo.insert(4);
-        cuckoo.insert(13);
-        cuckoo.printHashTables();
-        cuckoo.insert(23);
-        cuckoo.printHashTables();
-        cuckoo.insert(3);
-        cuckoo.printHashTables();
-        cuckoo.insert(1);
-        cuckoo.printHashTables();
-        cuckoo.insert(11);
-        cuckoo.printHashTables();
-        cuckoo.insert(21);
-        cuckoo.printHashTables();
-        cuckoo.insert(9);
-        cuckoo.printHashTables();
-        cuckoo.insert(29);
-        cuckoo.printHashTables();
-        cuckoo.insert(27);
-        cuckoo.printHashTables();
     }
 
 }
