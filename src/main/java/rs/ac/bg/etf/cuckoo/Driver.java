@@ -33,13 +33,13 @@ public class Driver {
     }
 
     static class Result {
-        long runtime;
-        int bucketsAllocated;
-        long memoryUsed;
+        private long runtime;
+        private int entriesAllocated;
+        private long memoryUsed;
 
         Result(long runtime, int bucketsAllocated, long memoryUsed) {
             Result.this.runtime = runtime;
-            Result.this.bucketsAllocated = bucketsAllocated;
+            Result.this.entriesAllocated = bucketsAllocated;
             Result.this.memoryUsed = memoryUsed;
         }
 
@@ -49,7 +49,7 @@ public class Driver {
 
         void add(Result result) {
             Result.this.runtime += result.runtime;
-            Result.this.bucketsAllocated += result.bucketsAllocated;
+            Result.this.entriesAllocated += result.entriesAllocated;
             Result.this.memoryUsed += result.memoryUsed;
         }
     }
@@ -115,7 +115,7 @@ public class Driver {
         initializeTimesArrays();
     }
 
-    private Result testCuckoo(StandardCuckooHashTable hashTable, String name, boolean testOperations) {
+    private Result testCuckoo(CuckooHashTable hashTable, String name, boolean testOperations) {
         for (int i = 0; i < numbersForInsertion.length; i++) {
             hashTable.insert(numbersForInsertion[i]);
         }
@@ -145,7 +145,7 @@ public class Driver {
         return new Result(elapsedTime.toMillis(), hashTable.getCapacity(), heapMemoryUsage.getUsed());
     }
 
-    public Result testCuckooWithOperations(StandardCuckooHashTable hashTable, String name) {
+    public Result testCuckooWithOperations(CuckooHashTable hashTable, String name) {
         int lookupTimesIndex = 0;
         int insertionTimesIndex = 0;
         int deletionTimesIndex = 0;
@@ -314,10 +314,10 @@ public class Driver {
             yAxis[0][2][i] = (double) blockedCuckooTotal.runtime / n;
             yAxis[0][3][i] = (double) hashSetTotal.runtime / n;
 
-            yAxis[1][0][i] = (double) cuckooTotal.bucketsAllocated / n;
-            yAxis[1][1][i] = (double) asymmetricCuckooTotal.bucketsAllocated / n;
-            yAxis[1][2][i] = (double) blockedCuckooTotal.bucketsAllocated / n;
-            yAxis[1][3][i] = (double) hashSetTotal.bucketsAllocated / n;
+            yAxis[1][0][i] = (double) cuckooTotal.entriesAllocated / n;
+            yAxis[1][1][i] = (double) asymmetricCuckooTotal.entriesAllocated / n;
+            yAxis[1][2][i] = (double) blockedCuckooTotal.entriesAllocated / n;
+            yAxis[1][3][i] = (double) hashSetTotal.entriesAllocated / n;
 
             yAxis[2][0][i] = (double) cuckooTotal.memoryUsed / n;
             yAxis[2][1][i] = (double) asymmetricCuckooTotal.memoryUsed / n;

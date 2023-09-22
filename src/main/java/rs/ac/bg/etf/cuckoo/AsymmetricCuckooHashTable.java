@@ -8,8 +8,8 @@ public class AsymmetricCuckooHashTable<T> extends StandardCuckooHashTable<T> {
 
     public AsymmetricCuckooHashTable(int capacity, double loadFactor) {
         super(capacity, loadFactor);
-        this.firstTable = new SingleEntry[(int) Math.floor((double) capacity * 2 / 3)];
-        this.secondTable = new SingleEntry[(int) Math.ceil((double) capacity / 3)];
+        this.firstTable = new Entry[(int) Math.floor((double) capacity * 2 / 3)];
+        this.secondTable = new Entry[(int) Math.ceil((double) capacity / 3)];
     }
 
 }

@@ -5,16 +5,16 @@ import org.apache.commons.codec.digest.MurmurHash3;
 
 public class StandardCuckooHashTable<T> implements CuckooHashTable<T> {
 
-    protected int size;
-    protected int capacity;
-    protected int threshold;
-    protected final double loadFactor;
-    protected static final int MAXIMUM_CAPACITY = 1073741824;
+    private int size;
+    private int capacity;
+    private int threshold;
+    private final double loadFactor;
+    private static final int MAXIMUM_CAPACITY = 1073741824;
     protected Entry<T>[] firstTable;
     protected Entry<T>[] secondTable;
-    protected final Random random;
-    protected int seed1;
-    protected int seed2;
+    private final Random random;
+    private int seed1;
+    private int seed2;
 
     public StandardCuckooHashTable() {
         this(1024, (double) 1 / 3);
@@ -32,38 +32,45 @@ public class StandardCuckooHashTable<T> implements CuckooHashTable<T> {
         this.seed2 = random.nextInt();
     }
 
+    @Override
+    public int getSize() {
+        return size;
+    }
+
+    @Override
     public int getCapacity() {
         return capacity;
     }
 
-    protected int hashFunction1(T key) {
+    private int hashFunction1(T key) {
         return MurmurHash3.hash32(key.hashCode(), seed1) &
                 (firstTable.length - 1);
     }
 
-    protected int hashFunction2(T key) {
+    private int hashFunction2(T key) {
         return MurmurHash3.hash32(key.hashCode(), seed2) &
                 (secondTable.length - 1);
     }
 
+    @Override
     public boolean insert(T key) {
         if (contains(key)) {
             return false;
         }
         T keyToInsert = key;
         for (int i = 0; i < threshold; i++) {
-            SingleEntry<T> entryToInsert = new SingleEntry<>(keyToInsert);
+            Entry<T> entryToInsert = new Entry<>(keyToInsert);
             int index1 = hashFunction1(keyToInsert);
-            keyToInsert = firstTable[index1] != null ? ((SingleEntry<T>) firstTable[index1]).getKey() : null;
+            keyToInsert = firstTable[index1] != null ? firstTable[index1].getKey() : null;
             firstTable[index1] = entryToInsert;
             if (keyToInsert == null) {
                 size++;
                 return true;
             }
 
-            entryToInsert = new SingleEntry<>(keyToInsert);
+            entryToInsert = new Entry<>(keyToInsert);
             int index2 = hashFunction2(keyToInsert);
-            keyToInsert = secondTable[index2] != null ? ((SingleEntry<T>) secondTable[index2]).getKey() : null;
+            keyToInsert = secondTable[index2] != null ? secondTable[index2].getKey() : null;
             secondTable[index2] = entryToInsert;
             if (keyToInsert == null) {
                 size++;
@@ -76,22 +83,24 @@ public class StandardCuckooHashTable<T> implements CuckooHashTable<T> {
         return true;
     }
 
+    @Override
     public boolean contains(T key) {
         int index1 = hashFunction1(key);
-        if (firstTable[index1] != null && ((SingleEntry<T>) firstTable[index1]).getKey().equals(key)) return true;
+        if (firstTable[index1] != null && firstTable[index1].getKey().equals(key)) return true;
         int index2 = hashFunction2(key);
-        return secondTable[index2] != null && ((SingleEntry<T>) secondTable[index2]).getKey().equals(key);
+        return secondTable[index2] != null && secondTable[index2].getKey().equals(key);
     }
 
+    @Override
     public boolean remove(T key) {
         int index1 = hashFunction1(key);
-        if (firstTable[index1] != null && ((SingleEntry<T>) firstTable[index1]).getKey().equals(key)) {
+        if (firstTable[index1] != null && firstTable[index1].getKey().equals(key)) {
             firstTable[index1] = null;
             size--;
             return true;
         }
         int index2 = hashFunction2(key);
-        if (secondTable[index2] != null && ((SingleEntry<T>) secondTable[index2]).getKey().equals(key)) {
+        if (secondTable[index2] != null && secondTable[index2].getKey().equals(key)) {
             secondTable[index2] = null;
             size--;
             return true;
@@ -121,11 +130,11 @@ public class StandardCuckooHashTable<T> implements CuckooHashTable<T> {
 
         for (int i = 0; i < tempFirstTable.length; i++) {
             if (tempFirstTable[i] != null)
-                insert(((SingleEntry<T>) tempFirstTable[i]).getKey());
+                insert(tempFirstTable[i].getKey());
         }
         for (int i = 0; i < tempSecondTable.length; i++) {
             if (tempSecondTable[i] != null)
-                insert(((SingleEntry<T>)tempSecondTable[i]).getKey());
+                insert(tempSecondTable[i].getKey());
         }
     }
 

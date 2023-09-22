@@ -2,7 +2,7 @@ package rs.ac.bg.etf.cuckoo;
 
 import java.util.Random;
 
-public class BlockedEntry<T> extends Entry<T> {
+public class BlockedEntry<T> {
     private T[] keys;
 
     public BlockedEntry(T key, int blockSize) {
